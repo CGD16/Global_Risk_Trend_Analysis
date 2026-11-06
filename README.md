@@ -1,6 +1,6 @@
 # 🌐 WEF-Aligned Multi-Agent Trend Intelligence & Newsletter Pipeline
 
-An automated multi-agent AI framework that leverages the World Economic Forum (WEF) Global Risks Report taxonomy to monitor macro-trends [1][2], scrape news across five core pillars, synthesize actionable insights, generate visualizations, and deliver executive email newsletters.
+An automated multi-agent AI framework that leverages the World Economic Forum (WEF) Global Risks Report taxonomy to monitor macro-trends [¹], scrape news across five core pillars, synthesize actionable insights, generate visualizations, and deliver executive email newsletters.
 
 ---
 
@@ -232,5 +232,4 @@ pillars:
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-[1]: https://www.weforum.org/publications/global-risks-report-2026
-[2]: https://reports.weforum.org/docs/WEF_Global_Risks_Report_2026.pdf
+[¹]: https://www.weforum.org/publications/global-risks-report-2026
