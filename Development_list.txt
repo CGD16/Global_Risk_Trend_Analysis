@@ -1,0 +1,17 @@
+✅ Completed
+- Initialized the project with uv for dependency and virtual environment management.
+- Set up Python 3.12.16.
+- Installed and configured FastAPI.
+- Created a /health endpoint.
+- Connected to Docker Model Runner on Ubuntu.
+- Selected Qwen 3.5 9B (Q4 quantized) running locally on an RTX 3060 (12 GB VRAM).
+- Configured Qwen with Thinking Mode disabled for faster responses and lower token usage.
+🧪 Tested
+- ✅ FastAPI /health endpoint – working.
+- ✅ Docker Model Runner API – accessible.
+- ✅ Qwen 3.5 9B inference via REST API – working.
+- ✅ Non-thinking mode – working (Hello!, 3 output tokens).
+- ⏳ FastAPI → Qwen integration – implementation prepared, final test pending.
+- ⏳ Tavily / NewsAPI integration – not started yet.
+- ⏳ Agentic research workflow – not implemented yet.
+Next step: Finalize FastAPI–LLM integration and build the first autonomous web research agent.
