@@ -1,2 +1,6 @@
 # Local environment variables
 .env
+
+# Python Bytecode (verhindert das Tracking aller .pyc und __pycache__ Ordner)
+__pycache__/
+*.pyc
