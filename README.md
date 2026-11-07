@@ -108,23 +108,19 @@ The multi-agent system categorizes all analysis into five predefined domains:
    cd wef-trend-intelligence-agent
    ```
 
-2. **Create a virtual environment:**
+2. **Create a virtual environment and Install dependencies:**
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   uv sync
    ```
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+
 
 ### Configuration
 
 Create a `.env` file in the root directory:
 
 ```env
-# LLM Provider Setup
+# LLM Provider Setup 
 OPENAI_API_KEY=REPLACE_WITH_YOUR_API_KEY
 
 # News & Scraping Services
