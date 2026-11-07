@@ -94,7 +94,7 @@ The multi-agent system categorizes all analysis into five predefined domains:
 
 ### Prerequisites
 
-* **Python:** 3.10 or higher
+* **Python:** 3.12 or higher
 * **API Keys:**
   * OpenAI API / Anthropic API (for LLM backend)
   * Tavily AI or NewsAPI key (for web scraping/search)
