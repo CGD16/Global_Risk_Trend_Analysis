@@ -1,5 +1,13 @@
+import logging
+
 from fastapi import FastAPI, HTTPException
-from openai import OpenAI, OpenAIError
+from openai import OpenAIError
+
+from src.agents.research_agent import generate_queries
+from src.llm.client import MODEL, InvalidModelOutput, complete
+from src.schemas.research import ResearchQueries, ResearchRequest
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Global Risk Trend Analysis API",
@@ -7,52 +15,36 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Local Docker Model Runner
-client = OpenAI(
-    base_url="http://localhost:12434/engines/v1",
-    api_key="not-needed",
-    timeout=120.0,
-)
 
-MODEL = "ai/qwen3.5:9B-UD-Q4_K_XL"
+def model_error(exc: Exception) -> HTTPException:
+    # Do not log prompts, response bodies, URLs, or exception messages.
+    logger.warning("Local LLM request failed (%s)", type(exc).__name__)
+    return HTTPException(
+        status_code=502, detail="Local LLM failed to return a valid response"
+    )
 
 
 @app.get("/health")
-def health_check():
+def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
 @app.get("/llm/test")
-def test_llm():
+def test_llm() -> dict[str, str | int | None]:
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a research assistant specializing in global risks.",
-                },
-                {
-                    "role": "user",
-                    "content": "What are geopolitical risks? Answer in one sentence.",
-                },
-            ],
+        content, tokens = complete(
+            "You are a research assistant specializing in global risks.",
+            "What are geopolitical risks? Answer in one sentence.",
             max_tokens=256,
-            extra_body={
-                "chat_template_kwargs": {
-                    "enable_thinking": False
-                }
-            },
         )
+        return {"model": MODEL, "response": content, "tokens_used": tokens}
+    except (OpenAIError, InvalidModelOutput) as exc:
+        raise model_error(exc) from exc
 
-        return {
-            "model": MODEL,
-            "response": response.choices[0].message.content,
-            "tokens_used": response.usage.total_tokens if response.usage else None,
-        }
 
-    except OpenAIError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Local LLM request failed: {exc}",
-        ) from exc
+@app.post("/research/queries", response_model=ResearchQueries)
+def research_queries(request: ResearchRequest) -> ResearchQueries:
+    try:
+        return generate_queries(request)
+    except (OpenAIError, InvalidModelOutput) as exc:
+        raise model_error(exc) from exc
