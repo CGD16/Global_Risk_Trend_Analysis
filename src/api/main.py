@@ -9,12 +9,12 @@ app = FastAPI(
 
 # Local Docker Model Runner
 client = OpenAI(
-    base_url="http://localhost:12434/engines/v1",
+    base_url="http://localhost:11434/v1",
     api_key="not-needed",
     timeout=120.0,
 )
 
-MODEL = "ai/qwen3.5:9B-UD-Q4_K_XL"
+MODEL = "hf.co/unsloth/Qwen3.5-9B-GGUF:UD-Q4_K_XL"
 
 
 @app.get("/health")

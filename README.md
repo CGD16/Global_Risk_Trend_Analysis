@@ -2,23 +2,26 @@
 
 An automated multi-agent AI framework that leverages the World Economic Forum (WEF) Global Risks Report taxonomy to monitor macro-trends [¹], scrape news across five core pillars, synthesize actionable insights, generate visualizations, and deliver executive email newsletters.
 
+> **Status:** Early development. The FastAPI backend and local LLM connection are working; the agents, scraping, charting and email delivery described below are planned (see [Roadmap](#-roadmap)).
+
 ---
 
 ## 📌 Table of Contents
 
-- [Overview](#overview)
-- [System Architecture](#system-architecture)
-- [Core Features](#core-features)
-- [WEF Risk Pillars](#wef-risk-pillars)
-- [Getting Started](#getting-started)
+- [Overview](#-overview)
+- [System Architecture](#-system-architecture)
+- [Core Features](#-core-features)
+- [WEF Risk Pillars](#-wef-risk-pillars)
+- [Getting Started](#-getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
+  - [LLM Setup](#llm-setup)
   - [Configuration](#configuration)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [Configuration Reference](#configuration-reference)
-- [Roadmap](#roadmap)
-- [License](#license)
+- [Usage](#-usage)
+- [Project Structure](#-project-structure)
+- [Configuration Reference](#-configuration-reference-taxonomyyaml-planned)
+- [Roadmap](#-roadmap)
+- [License](#-license)
 
 ---
 
@@ -32,11 +35,13 @@ The **WEF Trend Intelligence Pipeline** automates the workflow of macro-trend mo
 4. Convert data insights into dynamic visuals and charts.
 5. Compile and send an HTML email newsletter to targeted subscribers.
 
+The agents are exposed through a **FastAPI** service, so they can be orchestrated uniformly via API endpoints.
+
 ---
 
 ## 🏗 System Architecture
 
-The pipeline uses a **Multi-Agent Orchestration Architecture** (e.g., LangGraph, CrewAI, or AutoGen).
+The pipeline uses a **Multi-Agent Orchestration Architecture** (e.g., LangGraph, CrewAI, or AutoGen), served through a FastAPI interface.
 
 ```
    ┌───────────────────────────────────────────────────────────┐
@@ -73,6 +78,7 @@ The pipeline uses a **Multi-Agent Orchestration Architecture** (e.g., LangGraph,
 * **Smart Summarization:** Extracts macro implications, key bullet points, and "Why It Matters" sections without hallucinations.
 * **Automated Chart Generation:** Generates responsive visual charts (e.g., QuickChart API, Chart.js) visualizing trend scores, news volume, or risk heatmaps.
 * **Responsive HTML Newsletter:** Assembles modern, mobile-ready email templates ready for automated distribution via SendGrid, Mailgun, or SMTP.
+* **Local or Cloud LLMs:** Works with any OpenAI-compatible endpoint (Ollama, Docker Model Runner, OpenAI).
 
 ---
 
@@ -94,64 +100,145 @@ The multi-agent system categorizes all analysis into five predefined domains:
 
 ### Prerequisites
 
-* **Python:** 3.12 or higher
-* **API Keys:**
-  * OpenAI API / Anthropic API (for LLM backend)
-  * Tavily AI or NewsAPI key (for web scraping/search)
-
+* **[uv](https://docs.astral.sh/uv/):** Python package and environment manager (replaces `pip`, `venv` and `requirements.txt`). It also downloads Python 3.12 automatically if it is missing.
+  ```bash
+  # macOS / Linux
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  # Windows (PowerShell)
+  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+  ```
+* **An LLM backend** (one of):
+  * a local model via Ollama or Docker Model Runner (no API key needed), or
+  * an OpenAI API key.
+* **Optional (planned features):** Tavily or NewsAPI key for news search.
 
 ### Installation
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-org/wef-trend-intelligence-agent.git
-   cd wef-trend-intelligence-agent
-   ```
+```bash
+git clone https://github.com/CGD16/Global_Risk_Trend_Analysis.git
+cd Global_Risk_Trend_Analysis
+uv sync
+```
 
-2. **Create a virtual environment and Install dependencies:**
-   ```bash
-   uv sync
-   ```
+`uv sync` creates a project-local virtual environment (`.venv`) and installs all dependencies from `pyproject.toml` / `uv.lock`. You do not need to create or activate an environment manually.
 
+Add new packages with `uv add <package>` (not `pip install`).
 
+### LLM Setup
+
+The app talks to a local model through the OpenAI-compatible API. Choose **one** option.
+
+**Option A: Docker Model Runner**
+
+Requires Docker with the Model Runner plugin and host-side TCP support enabled (port 12434).
+
+```bash
+docker model pull ai/qwen3.5:9B-UD-Q4_K_XL
+```
+
+In `src/api/main.py`:
+
+```python
+client = OpenAI(
+    base_url="http://localhost:12434/engines/v1",
+    api_key="not-needed",
+    timeout=120.0,
+)
+MODEL = "ai/qwen3.5:9B-UD-Q4_K_XL"
+```
+
+**Option B: Ollama**
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh     # Linux; other OS: https://ollama.com
+ollama pull hf.co/unsloth/Qwen3.5-9B-GGUF:UD-Q4_K_XL
+ollama list                                       # shows the exact model name
+```
+
+In `src/api/main.py`:
+
+```python
+client = OpenAI(
+    base_url="http://localhost:11434/v1",
+    api_key="not-needed",
+    timeout=120.0,
+)
+MODEL = "hf.co/unsloth/Qwen3.5-9B-GGUF:UD-Q4_K_XL"
+```
+
+> A 9B model in Q4 needs roughly 6–8 GB of free RAM/VRAM. Qwen3.5 is a reasoning model, so the first request can be slow; raise `timeout` (e.g. to `300.0`) if requests time out.
 
 ### Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the project root (it is git-ignored):
 
 ```env
-# LLM Provider Setup optional if you use it locally
+# Only needed if you use OpenAI instead of a local model
 OPENAI_API_KEY=REPLACE_WITH_YOUR_API_KEY
 
-# News & Scraping Services
+# News & scraping services (planned features)
 TAVILY_API_KEY=your_tavily_api_key_here
 NEWS_API_KEY=your_news_api_key_here
-
 ```
 
 ---
 
 ## 🚀 Usage
 
-### 1. Run the Full Multi-Agent Pipeline
-
-To trigger the complete workflow (Ingestion ➔ Scraping ➔ Summarization ➔ Charting ➔ Delivery):
+Start the API in development mode:
 
 ```bash
-python main.py --mode full --output email
+uv run fastapi dev src/api/main.py
 ```
 
-### 2. Run Preview / Dry Run Mode (No Email Sent)
+* API: http://127.0.0.1:8000
+* Interactive docs: http://127.0.0.1:8000/docs
+* Health check: `curl http://127.0.0.1:8000/health`
 
-To preview the newsletter locally as an HTML file without triggering email distribution:
+If the `fastapi` command complains about a missing `fastapi[standard]`, either add it permanently with `uv add "fastapi[standard]"` or run once with:
 
 ```bash
-python main.py --mode preview --output-file dist/newsletter_preview.html
+uv run --with "fastapi[standard]" fastapi dev src/api/main.py
+```
+
+Alternatively, start with uvicorn directly:
+
+```bash
+uv run uvicorn src.api.main:app --reload
+```
+
+### Planned CLI
+
+Once the agents are implemented, the full pipeline and a dry-run preview mode are planned:
+
+```bash
+# Full run: Ingestion ➔ Scraping ➔ Summarization ➔ Charting ➔ Delivery
+uv run python main.py --mode full --output email
+
+# Preview without sending email
+uv run python main.py --mode preview --output-file dist/newsletter_preview.html
 ```
 
 ---
 
 ## 📁 Project Structure
+
+### Current
+
+```text
+├── src/
+│   └── api/
+│       └── main.py             # FastAPI app (health check + LLM endpoint)
+├── .gitignore                  # ignores .env and .venv
+├── .python-version             # Python 3.12
+├── Development_list.txt
+├── pyproject.toml              # Dependencies (managed by uv)
+├── uv.lock                     # Locked dependency versions
+├── recommendation.md
+└── README.md
+```
+
+### Planned
 
 ```text
 ├── config/
@@ -170,17 +257,14 @@ python main.py --mode preview --output-file dist/newsletter_preview.html
 │   └── utils/
 │       └── logger.py
 ├── tests/
-├── .env.example
-├── main.py                     # Pipeline Orchestrator Entrypoint
-├── README.md
-└── requirements.txt
+└── .env.example
 ```
 
 ---
 
-## ⚙️ Configuration Reference (`taxonomy.yaml`)
+## ⚙️ Configuration Reference (`taxonomy.yaml`, planned)
 
-You can customize the underlying focus topics for each pillar in `config/taxonomy.yaml`:
+You will be able to customize the focus topics for each pillar in `config/taxonomy.yaml`:
 
 ```yaml
 pillars:
@@ -207,6 +291,9 @@ pillars:
 
 - [x] Initial Multi-Agent Architecture Design
 - [x] WEF Risk Taxonomy Mapping
+- [x] Dependency management with uv
+- [x] FastAPI backend with local LLM connection (Docker Model Runner / Ollama)
+- [ ] Move LLM URL and model name into `.env` (`LLM_BASE_URL`, `LLM_MODEL`)
 - [ ] Auto-scraping pipeline implementation (Tavily / NewsAPI)
 - [ ] Automated HTML template compiler with Chart.js / QuickChart
 - [ ] Subscriber management database integration
