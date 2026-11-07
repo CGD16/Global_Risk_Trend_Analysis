@@ -98,7 +98,7 @@ The multi-agent system categorizes all analysis into five predefined domains:
 * **API Keys:**
   * OpenAI API / Anthropic API (for LLM backend)
   * Tavily AI or NewsAPI key (for web scraping/search)
-  * SendGrid / Mailgun API key (or SMTP credentials for sending emails)
+
 
 ### Installation
 
@@ -120,23 +120,13 @@ The multi-agent system categorizes all analysis into five predefined domains:
 Create a `.env` file in the root directory:
 
 ```env
-# LLM Provider Setup 
+# LLM Provider Setup optional if you use it locally
 OPENAI_API_KEY=REPLACE_WITH_YOUR_API_KEY
 
 # News & Scraping Services
 TAVILY_API_KEY=your_tavily_api_key_here
 NEWS_API_KEY=your_news_api_key_here
 
-# Email Delivery Configuration
-EMAIL_PROVIDER=sendgrid  # Options: sendgrid, smtp
-SENDGRID_API_KEY=your_sendgrid_api_key
-SENDER_EMAIL=newsletter@yourdomain.com
-
-# SMTP Backup Settings (Optional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
 ```
 
 ---
