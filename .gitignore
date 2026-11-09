@@ -7,4 +7,6 @@ __pycache__/
 .ruff_cache/
 .venv/
 
-
+# Generated reports and newsletters (keep the directory placeholder)
+/dist/*
+!/dist/.gitkeep

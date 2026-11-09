@@ -44,9 +44,34 @@ uv run ruff check src tests
 uv run ruff format --check src tests
 ```
 
-Implementation: `src/api/main.py` handles HTTP, `src/llm/client.py` handles model
+Implementation: `src/api/main.py` creates the app and registers the routers in
+`src/api/routes/` (health, LLM test, research). `src/llm/client.py` handles model
 communication, `src/agents/research_agent.py` coordinates query generation, and
-`src/schemas/research.py` validates input and output.
+`src/schemas/research.py` validates input and output. The research system prompt
+lives in `prompts/research_queries.txt` and is loaded relative to the module,
+independently of the working directory. Keep the `prompts/` directory alongside
+`src/` when deploying. Tests use mocked model responses and require no running
+model or external API keys.
+
+
+## Current project structure
+
+```text
+src/
+├── api/
+│   ├── main.py
+│   └── routes/          # Health, LLM test, and research endpoints
+├── llm/                 # Central local model client
+├── agents/              # Research query generation
+├── schemas/             # Validated requests and responses
+└── utils/               # Placeholder for shared helpers
+prompts/                 # Research prompt files
+tests/                   # Tests with mocked model responses
+dist/                    # Placeholder for generated reports and newsletters
+```
+
+`src/utils/` and `dist/` contain `.gitkeep` placeholder files so Git preserves
+these directories. Generated files in `dist/` are ignored.
 
 ---
 
