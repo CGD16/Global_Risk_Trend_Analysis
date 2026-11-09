@@ -21,6 +21,23 @@ Endpoints:
 - `GET /llm/test`: tests the API-to-model connection.
 - `POST /research/queries`: generates search queries without executing searches.
 
+The endpoint definitions live in `src/api/routes/`:
+
+| File | Endpoint |
+| --- | --- |
+| `src/api/routes/health.py` | `GET /health` |
+| `src/api/routes/llm.py` | `GET /llm/test` |
+| `src/api/routes/research.py` | `POST /research/queries` |
+
+Each module defines an `APIRouter`. `src/api/main.py` imports these modules and
+registers their routers using `app.include_router(...)`. This folder structure is
+a project convention; FastAPI does not require it. The route module
+`src/api/routes/llm.py` handles HTTP requests, while `src/llm/client.py` handles
+communication with the local model.
+
+Open http://127.0.0.1:8000/docs to view and test the endpoints interactively.
+There is currently no endpoint defined for `/`, so the base URL returns `404`.
+
 ```bash
 curl -X POST http://localhost:8000/research/queries   -H 'Content-Type: application/json'   -d '{"topic":"Geopolitical risks","days":7}'
 ```
