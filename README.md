@@ -1,3 +1,85 @@
+# Global Risk Trend Analysis — current implementation
+
+The working scope is a FastAPI API and a minimal Research Agent that generates
+validated search queries using local Docker Model Runner. It does not search the
+web or produce research findings yet. The pipeline design below is a future vision.
+
+## Run and test
+
+Use Python 3.12 and uv. Start Docker Model Runner with
+`ai/qwen3.5:9B-UD-Q4_K_XL` available at
+`http://localhost:12434/engines/v1`, then run:
+
+```bash
+uv sync
+uv run uvicorn src.api.main:app --reload
+```
+
+Endpoints:
+
+- `GET /health`: API process health; does not check model availability.
+- `GET /llm/test`: tests the API-to-model connection.
+- `POST /research/queries`: generates search queries without executing searches.
+
+```bash
+curl -X POST http://localhost:8000/research/queries   -H 'Content-Type: application/json'   -d '{"topic":"Geopolitical risks","days":7}'
+```
+
+The response contains `topic`, `days`, `start_date`, `end_date`, and `queries`.
+Dates are calculated by the application in UTC: end is today and start is
+today minus `days`. Future search adapters must apply these date bounds separately.
+Queries are plain search terms usable by Tavily or NewsAPI, rather than claims
+about existing articles.
+
+Topics must contain 3–300 characters after trimming; days must be an integer
+from 1–365 (default 7). The model returns 1–5 queries of 3–200 characters.
+Case and whitespace equivalent queries are deduplicated. Each request makes one
+model call, with a 120-second timeout, no retries, a 512-token output limit, and
+thinking disabled. Invalid JSON, empty or truncated output, and upstream errors
+return a sanitized `502`; invalid request bodies return `422`.
+
+```bash
+uv run pytest
+uv run ruff check src tests
+uv run ruff format --check src tests
+```
+
+Implementation: `src/api/main.py` creates the app and registers the routers in
+`src/api/routes/` (health, LLM test, research). `src/llm/client.py` handles model
+communication, `src/agents/research_agent.py` coordinates query generation, and
+`src/schemas/research.py` validates input and output. The research system prompt
+lives in `prompts/research_queries.txt` and is loaded relative to the module,
+independently of the working directory. Keep the `prompts/` directory alongside
+`src/` when deploying. Tests use mocked model responses and require no running
+model or external API keys.
+
+
+## Current project structure
+
+```text
+src/
+├── api/
+│   ├── main.py
+│   └── routes/          # Health, LLM test, and research endpoints
+├── llm/                 # Central local model client
+├── agents/              # Research query generation
+├── schemas/             # Validated requests and responses
+└── utils/               # Placeholder for shared helpers
+prompts/                 # Research prompt files
+tests/                   # Tests with mocked model responses
+dist/                    # Placeholder for generated reports and newsletters
+```
+
+`src/utils/` and `dist/` contain `.gitkeep` placeholder files so Git preserves
+these directories. Generated files in `dist/` are ignored.
+
+---
+
+## Future pipeline design (not implemented)
+
+The following original design notes describe planned features. Their setup,
+commands, and file layout do not describe the current implementation.
+
 # 🌐 WEF-Aligned Multi-Agent Trend Intelligence & Newsletter Pipeline
 
 An automated multi-agent AI framework that leverages the World Economic Forum (WEF) Global Risks Report taxonomy to monitor macro-trends [¹], scrape news across five core pillars, synthesize actionable insights, generate visualizations, and deliver executive email newsletters.

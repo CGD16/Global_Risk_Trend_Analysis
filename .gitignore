@@ -1,6 +1,13 @@
 # Local environment variables
 .env
-
-# Python Bytecode (verhindert das Tracking aller .pyc und __pycache__ Ordner)
+.env.*
+!.env.example
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+
+# Generated reports and newsletters (keep the directory placeholder)
+/dist/*
+!/dist/.gitkeep
