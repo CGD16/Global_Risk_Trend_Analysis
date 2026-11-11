@@ -114,6 +114,39 @@ uv run --env-file .env uvicorn src.api.main:app --reload
 Developers using Docker Model Runner need no `.env` file, because the defaults in
 the table above already point to it.
 
+#### Check which backend is active (addition)
+
+Print the configuration the client actually uses. This does not start a server
+and does not need a running model.
+
+Ollama (reads the local `.env` file):
+
+```bash
+uv run --env-file .env python -c "import src.llm.client as c; print(c.BACKEND, c.BASE_URL, c.MODEL, c.THINKING_OFF)"
+```
+
+Expected output:
+
+```text
+ollama http://localhost:11434/v1 qwen3.5:27b {'reasoning_effort': 'none'}
+```
+
+Docker Model Runner (no `.env` file, so the defaults apply):
+
+```bash
+uv run python -c "import src.llm.client as c; print(c.BACKEND, c.BASE_URL, c.MODEL, c.THINKING_OFF)"
+```
+
+Expected output:
+
+```text
+docker http://localhost:12434/engines/v1 ai/qwen3.5:9B-UD-Q4_K_XL {'chat_template_kwargs': {'enable_thinking': False}}
+```
+
+If the Docker command prints Ollama values, `LLM_*` variables are exported in
+the current shell (for example in `~/.zshrc`). Remove them with
+`unset LLM_BACKEND LLM_BASE_URL LLM_MODEL` and run the command again.
+
 #### Using Ollama on Linux (step by step) (addition)
 
 ```bash
