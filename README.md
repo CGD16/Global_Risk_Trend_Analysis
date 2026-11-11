@@ -1,8 +1,24 @@
 # Global Risk Trend Analysis — current implementation
 
 The working scope is a FastAPI API and a minimal Research Agent that generates
-validated search queries using local Docker Model Runner. It does not search the
-web or produce research findings yet. The pipeline design below is a future vision.
+validated search queries using local Docker Model Runner, plus bounded web
+search through Tavily. It does not synthesize research findings yet. The pipeline
+design below is a future vision.
+
+## Verified status (2026-11-11)
+
+The complete path **FastAPI → Research Agent → Qwen → Tavily → structured
+sources with URL deduplication** has been tested successfully. A live request
+for `Geopolitical risks` over seven days returned HTTP `200` and 13 sources.
+The user also confirmed that the running API works after loading `.env`.
+The source count is an observation from that run, not a guaranteed result count.
+
+- Automated checks: 39 tests passed; Ruff lint and formatting checks passed.
+- Implemented: query generation and validation, bounded Tavily searches,
+  normalized source metadata, and URL deduplication.
+- Next: review whether returned sources match the topic and requested dates.
+- Still planned: NewsAPI, relevance evaluation, autonomous follow-up searches,
+  evidence verification, and the other agents.
 
 ## Run and test
 
@@ -12,14 +28,20 @@ Use Python 3.12 and uv. Start Docker Model Runner with
 
 ```bash
 uv sync
-uv run uvicorn src.api.main:app --reload
+uv run uvicorn src.api.main:app --reload --env-file .env
 ```
+
+For web search, create a local `.env` containing `TAVILY_API_KEY=your_key`.
+The file is ignored by Git. Restart the server after changing `.env`.
+Without Tavily configuration, health and query generation remain available,
+but `/research/search` returns `503`.
 
 Endpoints:
 
 - `GET /health`: API process health; does not check model availability.
 - `GET /llm/test`: tests the API-to-model connection.
 - `POST /research/queries`: generates search queries without executing searches.
+- `POST /research/search`: generates queries and executes up to three Tavily searches.
 
 The endpoint definitions live in `src/api/routes/`:
 
@@ -27,7 +49,7 @@ The endpoint definitions live in `src/api/routes/`:
 | --- | --- |
 | `src/api/routes/health.py` | `GET /health` |
 | `src/api/routes/llm.py` | `GET /llm/test` |
-| `src/api/routes/research.py` | `POST /research/queries` |
+| `src/api/routes/research.py` | `POST /research/queries`, `POST /research/search` |
 
 Each module defines an `APIRouter`. `src/api/main.py` imports these modules and
 registers their routers using `app.include_router(...)`. This folder structure is
@@ -44,9 +66,15 @@ curl -X POST http://localhost:8000/research/queries   -H 'Content-Type: applicat
 
 The response contains `topic`, `days`, `start_date`, `end_date`, and `queries`.
 Dates are calculated by the application in UTC: end is today and start is
-today minus `days`. Future search adapters must apply these date bounds separately.
+today minus `days`. The Tavily adapter sends these bounds as separate parameters.
 Queries are plain search terms usable by Tavily or NewsAPI, rather than claims
 about existing articles.
+
+Only the topic is sent to the model; calendar bounds stay in application code.
+Query validation rejects years from 1900–2099, numeric dates, and full English
+or German month names. Such output follows the existing sanitized `502` path,
+without retries. This is a conservative text check, not a general date parser;
+month words also used as ordinary words (such as “may”) are rejected.
 
 Topics must contain 3–300 characters after trimming; days must be an integer
 from 1–365 (default 7). The model returns 1–5 queries of 3–200 characters.
@@ -79,7 +107,8 @@ src/
 │   ├── main.py
 │   └── routes/          # Health, LLM test, and research endpoints
 ├── llm/                 # Central local model client
-├── agents/              # Research query generation
+├── agents/              # Query planning and bounded search coordination
+├── tools/               # Search interface and Tavily HTTP adapter
 ├── schemas/             # Validated requests and responses
 └── utils/               # Placeholder for shared helpers
 prompts/                 # Research prompt files
@@ -393,7 +422,11 @@ pillars:
 - [x] Dependency management with uv
 - [x] FastAPI backend with local LLM connection (Docker Model Runner / Ollama)
 - [ ] Move LLM URL and model name into `.env` (`LLM_BASE_URL`, `LLM_MODEL`)
-- [ ] Auto-scraping pipeline implementation (Tavily / NewsAPI)
+- [x] Minimal Research Agent: validated Qwen query generation
+- [x] FastAPI Tavily search endpoint with normalized results and URL deduplication
+- [x] Live FastAPI → Qwen → Tavily integration test
+- [ ] Source relevance and date-range quality review
+- [ ] NewsAPI integration and autonomous follow-up research
 - [ ] Automated HTML template compiler with Chart.js / QuickChart
 - [ ] Subscriber management database integration
 - [ ] Multi-language support (EN / DE)
@@ -405,3 +438,67 @@ pillars:
 Distributed under the MIT License. See `LICENSE` for more information.
 
 [¹]: https://www.weforum.org/publications/global-risks-report-2026
+
+## Additional Notes
+
+### Tool Calling
+
+Tool calling lets an LLM request tools such as Tavily using structured
+arguments. Pydantic validates these arguments before Python executes
+the tool and returns its results to the model. The application controls
+permissions and limits.
+
+The `/research/queries` endpoint only generates search queries.
+LLM tool calling is not implemented. The `/research/search` endpoint uses a fixed
+Python-controlled Tavily workflow.
+
+### Fixed Search Tool Interface
+
+The Python entry point `research(request, tool)` in `src/agents/research_agent.py`
+accepts a `ResearchRequest` and a `SearchTool` implementation. Tools implement
+`search(SearchRequest) -> list[SearchResult]`. Pydantic validates search inputs
+and results. The agent executes at most three searches with five results each
+and deduplicates validated URLs. Tool failures propagate without retries.
+HTTP adapters must enforce timeouts and raise `SearchToolError` on failures.
+This interface is tested with a fake tool; a Tavily adapter and `/research/search` endpoint are now provided. Existing `/research/queries` behavior is unchanged.
+
+
+## Tavily search endpoint
+
+Set `TAVILY_API_KEY` in the server environment before starting the API. To load
+an existing local `.env` file explicitly, use:
+
+```bash
+uv run uvicorn src.api.main:app --reload --env-file .env
+```
+
+The application does not automatically load `.env`. Restart the server after
+changing the file; `--reload` should not be relied on to reload environment
+variables. A `503` with `"Tavily is not configured"` means the server has no
+non-empty `TAVILY_API_KEY`; no Tavily request has been made. Stop the server and
+restart it with `--env-file .env` from the project root. Keep keys out of source
+control and do not paste them into chat.
+
+```bash
+curl -X POST http://localhost:8000/research/search \
+  -H 'Content-Type: application/json' \
+  -d '{"topic":"Geopolitical risks","days":7}'
+```
+
+The response extends the query plan with `results`: title, URL, publication date,
+source hostname, and excerpt. Missing or unparseable publication dates are null;
+source hostnames are URL metadata, not verified publisher names. Dates are sent
+to Tavily as separate filters; returned dates are not independently verified.
+Retrieved text is returned as untrusted data and is not fed back to the LLM.
+
+Each request uses at most three sequential basic searches with five results each,
+30-second socket timeouts, no retries or pagination, and URL deduplication. The
+adapter caps response reads at 2 MB. Missing configuration returns `503`; Tavily
+failures or malformed results return a sanitized `502`, without partial results.
+An empty successful search returns an empty result list. The adapter uses Python's
+standard HTTP library, so no new dependencies are needed.
+
+Automated tests mock Tavily HTTP responses, including timeouts and upstream
+errors. A separate live integration test succeeded on 2026-11-11 (HTTP `200`,
+13 deduplicated sources), followed by confirmation from the user.
+API contract: https://docs.tavily.com/documentation/api-reference/endpoint/search
