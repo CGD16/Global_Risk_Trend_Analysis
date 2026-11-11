@@ -70,6 +70,24 @@ independently of the working directory. Keep the `prompts/` directory alongside
 `src/` when deploying. Tests use mocked model responses and require no running
 model or external API keys.
 
+### Backend configuration
+
+By default the app talks to Docker Model Runner. Set these environment
+variables to use another OpenAI-compatible backend, for example Ollama:
+
+| Variable | Default (Docker Model Runner) | Example (Ollama) |
+| --- | --- | --- |
+| `LLM_BACKEND` | `docker` | `ollama` |
+| `LLM_BASE_URL` | `http://localhost:12434/engines/v1` | `http://localhost:11434/v1` |
+| `LLM_MODEL` | `ai/qwen3.5:9B-UD-Q4_K_XL` | `qwen3.5:27b` |
+
+```bash
+LLM_BACKEND=ollama LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen3.5:27b \
+  uv run uvicorn src.api.main:app --reload
+```
+
+Thinking is disabled through `chat_template_kwargs` on Docker Model Runner and
+through `reasoning_effort: "none"` on Ollama.
 
 ## Current project structure
 
