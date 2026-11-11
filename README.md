@@ -4,6 +4,10 @@ The working scope is a FastAPI API and a minimal Research Agent that generates
 validated search queries using local Docker Model Runner. It does not search the
 web or produce research findings yet. The pipeline design below is a future vision.
 
+> **Addition:** Docker Model Runner is the default backend, but the app also runs
+> with Ollama without code changes. See [Backend configuration](#backend-configuration)
+> and [Using Ollama](#using-ollama-on-linux-step-by-step).
+
 ## Run and test
 
 Use Python 3.12 and uv. Start Docker Model Runner with
@@ -70,6 +74,82 @@ independently of the working directory. Keep the `prompts/` directory alongside
 `src/` when deploying. Tests use mocked model responses and require no running
 model or external API keys.
 
+### Backend configuration
+
+By default the app talks to Docker Model Runner. Set these environment
+variables to use another OpenAI-compatible backend, for example Ollama:
+
+| Variable | Default (Docker Model Runner) | Example (Ollama) |
+| --- | --- | --- |
+| `LLM_BACKEND` | `docker` | `ollama` |
+| `LLM_BASE_URL` | `http://localhost:12434/engines/v1` | `http://localhost:11434/v1` |
+| `LLM_MODEL` | `ai/qwen3.5:9B-UD-Q4_K_XL` | `qwen3.5:27b` |
+
+```bash
+LLM_BACKEND=ollama LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=qwen3.5:27b \
+  uv run uvicorn src.api.main:app --reload
+```
+
+Thinking is disabled through `chat_template_kwargs` on Docker Model Runner and
+through `reasoning_effort: "none"` on Ollama.
+
+#### Using a `.env` file (addition)
+
+Instead of typing the variables before every command, put them in a local `.env`
+file in the project root. The file is git-ignored, so each developer keeps their
+own backend settings and nobody has to change code or commit anything.
+
+```env
+LLM_BACKEND=ollama
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=qwen3.5:27b
+```
+
+A `.env` file is not read automatically. Start the server with `--env-file`:
+
+```bash
+uv run --env-file .env uvicorn src.api.main:app --reload
+```
+
+Developers using Docker Model Runner need no `.env` file, because the defaults in
+the table above already point to it.
+
+#### Using Ollama on Linux (step by step) (addition)
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh   # installs Ollama and a systemd service
+ollama pull qwen3.5:27b                          # or qwen3.5:9b on smaller GPUs
+ollama list                                      # the name here must equal LLM_MODEL
+curl http://localhost:11434/v1/models            # Ollama is reachable
+```
+
+Rough memory needs of the official Ollama library models: `qwen3.5:9b` about
+6.6–7.6 GB, `qwen3.5:27b` about 17–20 GB, `qwen3.5:35b` about 22 GB. Run
+`ollama ps` after the first request; `100% GPU` means the model fits fully into
+VRAM. For longer inputs the context length can be raised through the
+`OLLAMA_CONTEXT_LENGTH` environment variable of the Ollama service.
+
+Check that everything works (two terminals; the server blocks its terminal):
+
+```bash
+# Terminal 1
+uv run --env-file .env uvicorn src.api.main:app --reload
+
+# Terminal 2
+curl http://localhost:8000/health
+curl http://localhost:8000/llm/test
+curl -X POST http://localhost:8000/research/queries -H 'Content-Type: application/json' -d '{"topic":"Geopolitical risks","days":7}'
+```
+
+#### Troubleshooting (addition)
+
+| Symptom | Likely cause and fix |
+| --- | --- |
+| `502 Local LLM failed to return a valid response` on `/llm/test` | Wrong `LLM_BASE_URL` or `LLM_MODEL` (the defaults point to Docker Model Runner), or the model produced no final answer. The real reason is printed in the terminal where `uvicorn` runs. |
+| Same `502`, with Ollama reachable | Thinking is still active: the model spent all 512 tokens on reasoning and returned an empty answer. Make sure `LLM_BACKEND=ollama` is set, so `reasoning_effort: "none"` is sent. |
+| `Address already in use` | An old server still runs on port 8000. Stop it with `Ctrl+C` or `pkill -f uvicorn`, or start with `--port 8001`. |
+| `curl: (7) Failed to connect` | The server is not running. Start it in a separate terminal first. |
+| `uv run fastapi dev ...` asks for `fastapi[standard]` | Use the `uvicorn` command above, or run once with `uv run --with "fastapi[standard]" fastapi dev src/api/main.py`. |
 
 ## Current project structure
 
@@ -96,6 +176,10 @@ these directories. Generated files in `dist/` are ignored.
 
 The following original design notes describe planned features. Their setup,
 commands, and file layout do not describe the current implementation.
+
+> **Addition:** Where the notes below conflict with the sections above, the
+> sections above are correct. Specific differences are marked with
+> "Addition" notes in the sections below.
 
 # 🌐 WEF-Aligned Multi-Agent Trend Intelligence & Newsletter Pipeline
 
@@ -227,6 +311,14 @@ Add new packages with `uv add <package>` (not `pip install`).
 
 The app talks to a local model through the OpenAI-compatible API. Choose **one** option.
 
+> **Addition:** The code snippets below are outdated. The client and model are no
+> longer defined in `src/api/main.py`. They live in `src/llm/client.py` and are
+> configured through the environment variables `LLM_BACKEND`, `LLM_BASE_URL` and
+> `LLM_MODEL`; see [Backend configuration](#backend-configuration). Do not edit
+> `src/api/main.py` for this. For Ollama, the official library names
+> (`qwen3.5:9b`, `qwen3.5:27b`) also work; see
+> [Using Ollama](#using-ollama-on-linux-step-by-step).
+
 **Option A: Docker Model Runner**
 
 Requires Docker with the Model Runner plugin and host-side TCP support enabled (port 12434).
@@ -280,6 +372,12 @@ TAVILY_API_KEY=your_tavily_api_key_here
 NEWS_API_KEY=your_news_api_key_here
 ```
 
+> **Addition:** For the current implementation the relevant `.env` variables are
+> `LLM_BACKEND`, `LLM_BASE_URL` and `LLM_MODEL` (see
+> [Using a `.env` file](#using-a-env-file-addition)). The API keys above are only
+> needed for planned features. Start the server with `--env-file .env`, because
+> the file is not loaded automatically.
+
 ---
 
 ## 🚀 Usage
@@ -306,6 +404,10 @@ Alternatively, start with uvicorn directly:
 uv run uvicorn src.api.main:app --reload
 ```
 
+> **Addition:** The `uvicorn` command is the documented way to start the current
+> implementation (see "Run and test" above). With a local `.env` file use
+> `uv run --env-file .env uvicorn src.api.main:app --reload`.
+
 ### Planned CLI
 
 Once the agents are implemented, the full pipeline and a dry-run preview mode are planned:
@@ -321,6 +423,11 @@ uv run python main.py --mode preview --output-file dist/newsletter_preview.html
 ---
 
 ## 📁 Project Structure
+
+> **Addition:** The "Current" tree below is an outdated snapshot. The actual
+> structure is shown in "Current project structure" at the top of this README
+> (`src/api/routes/`, `src/llm/`, `src/agents/`, `src/schemas/`, `prompts/`,
+> `tests/`, `dist/`).
 
 ### Current
 
@@ -397,6 +504,13 @@ pillars:
 - [ ] Automated HTML template compiler with Chart.js / QuickChart
 - [ ] Subscriber management database integration
 - [ ] Multi-language support (EN / DE)
+
+> **Addition (status update):** The item "Move LLM URL and model name into `.env`"
+> is implemented in `src/llm/client.py`: `LLM_BACKEND`, `LLM_BASE_URL` and
+> `LLM_MODEL` are read from the environment, with Docker Model Runner as default.
+> Further done: modular project structure (`routes/`, `llm/`, `agents/`,
+> `schemas/`, `prompts/`), `POST /research/queries` with validation, and tests
+> with mocked model responses.
 
 ---
 
