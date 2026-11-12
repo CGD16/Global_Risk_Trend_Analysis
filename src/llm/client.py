@@ -1,10 +1,19 @@
-"""Bounded communication with the local Docker Model Runner."""
 
+import os
 from functools import lru_cache
 
 from openai import OpenAI
 
-MODEL = "ai/qwen3.5:9B-UD-Q4_K_XL"
+MODEL = os.getenv("LLM_MODEL", "ai/qwen3.5:9B-UD-Q4_K_XL")
+BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:12434/engines/v1")
+BACKEND = os.getenv("LLM_BACKEND", "docker")
+
+# Docker Model Runner and Ollama switch thinking off differently.
+THINKING_OFF = (
+    {"reasoning_effort": "none"}
+    if BACKEND == "ollama"
+    else {"chat_template_kwargs": {"enable_thinking": False}}
+)
 
 
 class InvalidModelOutput(ValueError):
@@ -14,7 +23,7 @@ class InvalidModelOutput(ValueError):
 @lru_cache
 def get_client() -> OpenAI:
     return OpenAI(
-        base_url="http://localhost:12434/engines/v1",
+        base_url=BASE_URL,
         api_key="not-needed",
         timeout=120.0,
         max_retries=0,
@@ -29,7 +38,7 @@ def complete(system: str, prompt: str, max_tokens: int = 512) -> tuple[str, int 
             {"role": "user", "content": prompt},
         ],
         max_tokens=max_tokens,
-        extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+        extra_body=THINKING_OFF,
     )
     if not response.choices:
         raise InvalidModelOutput("Missing response choices")
