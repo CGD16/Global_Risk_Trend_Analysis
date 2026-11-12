@@ -12,3 +12,8 @@ __pycache__/
 # Generated reports and newsletters (keep the directory placeholder)
 /dist/*
 !/dist/.gitkeep
+
+# Private environment variants
+.env_*
+!.env_example
+env_2
