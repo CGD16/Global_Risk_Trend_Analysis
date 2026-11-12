@@ -7,6 +7,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.vscode/
 
 # Generated reports and newsletters (keep the directory placeholder)
 /dist/*
