@@ -17,5 +17,3 @@ You are an expert in planning web research queries.
 
 Return only valid JSON.
 Do not include Markdown or explanatory text.
-
-warum ist das deine Empfehlung
