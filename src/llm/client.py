@@ -1,13 +1,17 @@
-"""Bounded communication with the local model (Docker Model Runner or Ollama)."""
+"""Bounded communication with the local Docker Model Runner."""
 
 import os
 from functools import lru_cache
 
 from openai import OpenAI
 
-MODEL = os.getenv("LLM_MODEL", "ai/qwen3.5:9B-UD-Q4_K_XL")
-BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:12434/engines/v1")
-BACKEND = os.getenv("LLM_BACKEND", "docker")
+#MODEL = os.getenv("LLM_MODEL", "ai/qwen3.5:9B-UD-Q4_K_XL")
+#BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:12434/engines/v1")
+#BACKEND = os.getenv("LLM_BACKEND", "docker")
+
+MODEL = os.getenv("LLM_MODEL_4090", "LLM_MODEL_3060")
+BASE_URL = os.getenv("LLM_BASE_URL_ollama", "LLM_BASE_URL_docker")
+BACKEND = os.getenv("LLM_BACKEND_ollama", "LLM_BACKEND_docker")
 
 # Docker Model Runner and Ollama switch thinking off differently.
 THINKING_OFF = (
