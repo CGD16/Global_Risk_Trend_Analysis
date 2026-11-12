@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from openai import OpenAIError
 
 from src.api.routes.errors import model_error
-from src.llm.client_old import MODEL, InvalidModelOutput, complete
+from src.llm.client import MODEL, InvalidModelOutput, complete
 
 router = APIRouter()
 
