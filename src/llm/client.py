@@ -1,13 +1,18 @@
-"""Bounded communication with the local model (Docker Model Runner or Ollama)."""
+"""Bounded communication with the local model (Docker Model Runner or Ollama).
+
+Each pipeline role (query, curate, synthesis, visual, newsletter) can use its own
+model. Roles without their own LLM_MODEL_<ROLE> variable fall back to LLM_MODEL,
+so existing setups keep working unchanged.
+"""
 
 import os
 from functools import lru_cache
 
 from openai import OpenAI
 
-MODEL = os.getenv("LLM_MODEL", "ai/qwen3.5:9B-UD-Q4_K_XL")
-BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:12434/engines/v1")
-BACKEND = os.getenv("LLM_BACKEND", "docker")
+MODEL = os.getenv("LLM_MODEL_4090", "LLM_MODEL_3060")
+BASE_URL = os.getenv("LLM_BASE_URL_ollama", "LLM_BASE_URL_docker")
+BACKEND = os.getenv("LLM_BACKEND_ollama", "LLM_BACKEND_docker")
 
 # Docker Model Runner and Ollama switch thinking off differently.
 THINKING_OFF = (
@@ -16,9 +21,36 @@ THINKING_OFF = (
     else {"chat_template_kwargs": {"enable_thinking": False}}
 )
 
+# Role -> model. Unset LLM_MODEL_<ROLE> falls back to LLM_MODEL.
+ROLE_MODELS = {
+    "query": os.getenv("LLM_MODEL_QUERY", MODEL),
+    "curate": os.getenv("LLM_MODEL_CURATE", MODEL),
+    "synthesis": os.getenv("LLM_MODEL_SYNTHESIS", MODEL),
+    "visual": os.getenv("LLM_MODEL_VISUAL", MODEL),
+    "newsletter": os.getenv("LLM_MODEL_NEWSLETTER", MODEL),
+}
+
+# Per-role request timeout in seconds. Larger models and long inputs need more.
+ROLE_TIMEOUTS = {
+    "query": 120.0,
+    "curate": 120.0,
+    "synthesis": 600.0,
+    "visual": 180.0,
+    "newsletter": 300.0,
+}
+
 
 class InvalidModelOutput(ValueError):
     """The model did not return a complete, usable response."""
+
+
+def thinking_params(thinking: bool) -> dict:
+    """Backend-specific request options for switching thinking on or off."""
+    if not thinking:
+        return THINKING_OFF
+    if BACKEND == "ollama":
+        return {}  # Ollama thinks by default when reasoning_effort is not "none"
+    return {"chat_template_kwargs": {"enable_thinking": True}}
 
 
 @lru_cache
@@ -31,15 +63,26 @@ def get_client() -> OpenAI:
     )
 
 
-def complete(system: str, prompt: str, max_tokens: int = 512) -> tuple[str, int | None]:
+def complete(
+    system: str,
+    prompt: str,
+    max_tokens: int = 512,
+    *,
+    role: str = "query",
+    thinking: bool = False,
+) -> tuple[str, int | None]:
+    if role not in ROLE_MODELS:
+        raise ValueError(f"Unknown role {role!r}; expected one of {sorted(ROLE_MODELS)}")
+
     response = get_client().chat.completions.create(
-        model=MODEL,
+        model=ROLE_MODELS[role],
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ],
         max_tokens=max_tokens,
-        extra_body=THINKING_OFF,
+        timeout=ROLE_TIMEOUTS[role],
+        extra_body=thinking_params(thinking),
     )
     if not response.choices:
         raise InvalidModelOutput("Missing response choices")
