@@ -47,10 +47,17 @@ def generate_queries(request: ResearchRequest) -> ResearchQueries:
         PROMPT_PATH.read_text(encoding="utf-8").strip(),
         json.dumps({"topic": request.topic}),
     )
+
+    debug_path = Path(__file__).resolve().parents[2] / "dist" / "model_output.txt"
+    debug_path.parent.mkdir(parents=True, exist_ok=True)
+    debug_path.write_text(content, encoding="utf-8")
+
+
     try:
         plan = QueryPlan.model_validate_json(content)
     except ValidationError as exc:
-        raise InvalidModelOutput("Invalid research query JSON") from exc
+        # print output Format; file print; 
+        raise InvalidModelOutput("Invalid research query JSON") from exc # Format könnte schlecht 
     return ResearchQueries(
         **request.model_dump(),
         queries=plan.queries,
