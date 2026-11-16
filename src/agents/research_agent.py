@@ -48,7 +48,7 @@ def generate_queries(request: ResearchRequest) -> ResearchQueries:
         json.dumps({"topic": request.topic}),
     )
 
-    debug_path = Path(__file__).resolve().parents[2] / "dist" / "model_output.txt"
+    debug_path = Path(__file__).resolve().parents[2] / "dist" / "models" / f"{end_date}_model_output.txt"
     debug_path.parent.mkdir(parents=True, exist_ok=True)
     debug_path.write_text(content, encoding="utf-8")
 
