@@ -12,7 +12,7 @@ def test_llm() -> dict[str, str | int | None]:
     try:
         content, tokens = complete(
             "You are a research assistant specializing in global risks.",
-            "What are geopolitical risks? Answer in one sentence.",
+            "What are geopolitical risks? Answer in three sentence.",
             max_tokens=256,
         )
         return {"model": MODEL, "response": content, "tokens_used": tokens}

@@ -309,7 +309,7 @@ For example, given:
 
 ```json
 {
-  "topic": "Geopolitical risks",
+  "topic": "Evironmental risks",
   "days": 7
 }
 ```

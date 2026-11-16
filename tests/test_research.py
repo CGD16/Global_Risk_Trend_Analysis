@@ -19,7 +19,7 @@ def test_health():
 def test_queries_load_prompt_outside_project_and_deduplicate(monkeypatch, tmp_path):
     calls = []
 
-    def complete(system, prompt):
+    def complete(system, prompt, **kwargs):
         calls.append((system, json.loads(prompt)))
         return (
             '{"queries":["Trade risks", " trade RISKS ", "Regional conflicts"]}',
@@ -71,7 +71,7 @@ def test_invalid_request_never_calls_model(monkeypatch, body):
     ],
 )
 def test_invalid_model_output_is_sanitized(monkeypatch, output):
-    monkeypatch.setattr(research_agent, "complete", lambda *args: (output, None))
+    monkeypatch.setattr(research_agent, "complete", lambda *args, **kwargs: (output, None))
     response = client.post("/research/queries", json={"topic": "Global risks"})
     assert response.status_code == 502
     assert response.json() == {"detail": "Local LLM failed to return a valid response"}

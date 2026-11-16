@@ -1,0 +1,70 @@
+.
+├── AGENTS.md
+├── dist
+│   └── runs
+├── docs
+│   └── Development_list.txt
+├── prompts
+│   ├── research_queries.md
+│   └── research_queries.txt
+├── pyproject.toml
+├── README.md
+├── src
+│   ├── agents
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── research_agent.cpython-312.pyc
+│   │   └── research_agent.py
+│   ├── api
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── main.cpython-312.pyc
+│   │   └── routes
+│   │       ├── errors.py
+│   │       ├── health.py
+│   │       ├── __init__.py
+│   │       ├── llm.py
+│   │       ├── __pycache__
+│   │       │   ├── errors.cpython-312.pyc
+│   │       │   ├── health.cpython-312.pyc
+│   │       │   ├── __init__.cpython-312.pyc
+│   │       │   ├── llm.cpython-312.pyc
+│   │       │   └── research.cpython-312.pyc
+│   │       └── research.py
+│   ├── __init__.py
+│   ├── llm
+│   │   ├── client.py
+│   │   ├── __init__.py
+│   │   └── __pycache__
+│   │       ├── client.cpython-312.pyc
+│   │       └── __init__.cpython-312.pyc
+│   ├── __pycache__
+│   │   └── __init__.cpython-312.pyc
+│   ├── schemas
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   └── research.cpython-312.pyc
+│   │   └── research.py
+│   ├── tools
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   ├── search.cpython-312.pyc
+│   │   │   └── tavily.cpython-312.pyc
+│   │   ├── search.py
+│   │   └── tavily.py
+│   └── utils
+├── tests
+│   ├── test_llm_client.py
+│   ├── test_query_dates.py
+│   ├── test_research.py
+│   ├── test_search_tool.py
+│   └── test_tavily.py
+├── tree.txt
+└── uv.lock
+
+21 directories, 47 files

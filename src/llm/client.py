@@ -1,9 +1,12 @@
 """Bounded communication with the local Docker Model Runner."""
 
+import logging
 import os
 from functools import lru_cache
 
 from openai import OpenAI
+
+logger = logging.getLogger("uvicorn.error")
 
 #MODEL = os.getenv("LLM_MODEL", "ai/qwen3.5:9B-UD-Q4_K_XL")
 #BASE_URL = os.getenv("LLM_BASE_URL", "http://localhost:12434/engines/v1")
@@ -43,12 +46,19 @@ def complete(system: str, prompt: str, max_tokens: int = 512) -> tuple[str, int 
             {"role": "user", "content": prompt},
         ],
         max_tokens=max_tokens,
+        temperature=0,
         extra_body=THINKING_OFF,
     )
     if not response.choices:
         raise InvalidModelOutput("Missing response choices")
     choice = response.choices[0]
     if choice.finish_reason != "stop" or not choice.message.content:
+        logger.warning(
+            "LLM response rejected: finish_reason=%r content=%r usage=%s",
+            choice.finish_reason,
+            choice.message.content,
+            response.usage,
+        )
         raise InvalidModelOutput("Incomplete or empty model response")
     return (
         choice.message.content,
